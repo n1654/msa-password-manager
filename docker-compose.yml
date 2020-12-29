@@ -1,0 +1,18 @@
+version: "3.8"
+
+services:
+
+  password_storage:
+    build:
+      context: .
+      dockerfile: pass_stor.dockerfile
+    networks:
+      default:
+        ipv4_address: 172.20.0.254
+    hostname: pass_stor
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
