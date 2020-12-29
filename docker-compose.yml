@@ -6,6 +6,8 @@ services:
     build:
       context: .
       dockerfile: pass_stor.dockerfile
+    ports:
+      - "5000:5000"
     networks:
       default:
         ipv4_address: 172.20.0.254
