@@ -1,16 +1,9 @@
 #!/usr/bin/env python3
 
+from flask import Flask, jsonify, request
 import threading
 import time
 import json
-import crypto.py
-from flask import Flask, jsonify, request
-from OpenSSL import SSL
-
-
-context = SSL.Context(SSL.PROTOCOL_TLSv1_2)
-context.use_privatekey_file('/start/cert/key.pem')
-context.use_certificate_file('/start/cert/cert.pem')
 
 # Set key "field1": http://localhost:5000/set/field1?value=42
 # Get key "field1": http://localhost:5000/get/field1
@@ -94,4 +87,4 @@ def create_key(id):
 
 if __name__ == '__main__':
     threading.Thread(target=update_thread).start()
-    app.run(host='0.0.0.0', threaded=True, debug=True, ssl_context=context)
+    app.run(host='0.0.0.0', threaded=True, debug=True)
