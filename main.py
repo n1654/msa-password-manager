@@ -3,6 +3,7 @@
 from flask import Flask, jsonify, request
 import threading
 import time
+import json
 
 # Set key "field1": http://localhost:5000/set/field1?value=42
 # Get key "field1": http://localhost:5000/get/field1
@@ -12,41 +13,77 @@ import time
 app = Flask(__name__)
 lock = threading.Lock()
 
-d = {}
-d['data'] = {}
+with open('/start/storage.json', 'r') as f:
+    storage = json.load(f)
+
+
+@app.route('/', methods=['GET'])
+def welcome():
+    with lock:
+        return "Welcome Message"
+
 
 def update_thread():
-    global d
+    global storage
     while True:
         with lock:
-            d['uptime'] = d.get('uptime', 0) + 1
+            storage['uptime'] = storage.get('uptime', 0) + 1
         time.sleep(1.0)
+
 
 @app.route('/clear', methods=['GET'])
 def clear():
-    global d
+    global storage
     with lock:
-        d['data'] = {}
-        return jsonify(d)
+        storage['keys'] = []
+        return jsonify(storage)
 
-@app.route('/get', methods=['GET'])
-def get():
-    with lock:
-        return jsonify(d)
 
-@app.route('/get/<name>', methods=['GET'])
-def get_name(name):
+@app.route('/all-keys', methods=['GET'])
+def allkeys():
     with lock:
-        return jsonify(d['data'].get(name, {}))
+        return jsonify(storage['keys'])
 
-@app.route('/set/<name>', methods=['GET', 'POST'])
-def set(name):
-    global d
+
+def check_key(id):
+    with open('/start/storage.json', 'r') as f:
+        storage = json.load(f)
+    item_index = 0
+    for item in storage['keys']:
+        if ('id' in item.keys()) and (item['id'] == int(id)):
+            result = item
+            break
+        else:
+            result = {}
+        item_index += 1
+    # either item index or last index
+    return result, item_index
+
+
+@app.route('/key/<id>', methods=['GET'])
+def get_key_by_id(id):
     with lock:
-        d['data'][name] = d['data'].get(name, {})
-        d['data'][name]['value'] = request.args.get('value') or float('nan')
-        d['data'][name]['time'] = time.time()
-        return jsonify(d)
+        return jsonify(check_key(id)[0])
+
+
+# url?id=value1&name=value2&value=value3&description=value4
+@app.route('/key/<id>', methods=['POST'])
+def create_key(id):
+    id = int(id)
+    key = check_key(id)
+    global storage
+    with lock:
+        if len(key[0]) == 0:
+            storage['keys'].append(key[0])
+        index = key[1]
+        storage['keys'][index]['id'] = int(request.args.get('id'))
+        storage['keys'][index]['name'] = request.args.get('name', '...')
+        storage['keys'][index]['value'] = request.args.get('value', '...')
+        storage['keys'][index]['description'] = request.args.get('description', '...')
+        with open('/start/storage.json', 'w') as f:
+            json.dump(storage, f)
+        return jsonify(storage)
+
 
 if __name__ == '__main__':
     threading.Thread(target=update_thread).start()
